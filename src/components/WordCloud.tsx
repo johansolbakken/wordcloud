@@ -19,6 +19,12 @@ type WordRect = {
   opacity: number;
 };
 
+/**
+ * intersects checks if two rectangles intersect
+ * @param a rectangle a
+ * @param b rectangle b
+ * @returns
+ */
 const intersects = (a: Rect, b: Rect) => {
   return (
     a.x < b.x + b.width &&
@@ -28,6 +34,13 @@ const intersects = (a: Rect, b: Rect) => {
   );
 };
 
+/**
+ * isInBounds checks if a rectangle is within the bounds of the screen
+ * @param rect rectangle to check
+ * @param width width of the screen
+ * @param height height of the screen
+ * @returns
+ */
 const isInBounds = (rect: Rect, width: number, height: number) => {
   return (
     rect.x >= 0 &&
@@ -57,6 +70,10 @@ export const WordCloud = (props: WordCloudProps) => {
   const padding = props.padding ?? 20;
   const font = props.font ?? "Arial";
 
+  /**
+   * preprocessWords sorts the words by score and normalizes the scores
+   * @returns
+   */
   const preprocessWords = () => {
     const words = props.words.sort((a, b) => b.score - a.score);
     const totalScore = words.reduce((a, b) => a + b.score, 0);
@@ -67,6 +84,16 @@ export const WordCloud = (props: WordCloudProps) => {
     return normalizedWords;
   };
 
+  /**
+   * getRectFromScore gets a rectangle from a score
+   * @param ctx
+   * @param size
+   * @param text
+   * @param score
+   * @param screenWidth
+   * @param screenHeight
+   * @returns
+   */
   const getRectFromScore = (
     ctx: CanvasRenderingContext2D,
     size: number,
@@ -92,6 +119,16 @@ export const WordCloud = (props: WordCloudProps) => {
     return rect;
   };
 
+  /**
+   * generateWordRects generates rectangles for each word
+   * it tries to place the words in a way that they don't overlap
+   * @param ctx
+   * @param size
+   * @param words
+   * @param screenWidth
+   * @param screenHeight
+   * @returns
+   */
   const generateWordRects = (
     ctx: CanvasRenderingContext2D,
     size: number,
@@ -141,7 +178,11 @@ export const WordCloud = (props: WordCloudProps) => {
     return wordRects;
   };
 
-  useEffect(() => {
+  /**
+   * setup sets up the canvas and generates the rectangles and colors
+   * @returns
+   */
+  const setup = () => {
     const canvas = ref.current;
     if (!canvas) return;
 
@@ -174,9 +215,13 @@ export const WordCloud = (props: WordCloudProps) => {
     setColorScheme(colorScheme);
 
     setCurrentUsedSpace(wordRects);
-  }, [props.words, props.width, props.height]);
+  };
+  useEffect(setup, [props.words, props.width, props.height]);
 
-  // Render
+  /**
+   * render renders the canvas with the rectangles and words
+   * @returns
+   */
   const render = () => {
     const canvas = ref.current;
     if (!canvas) return;
@@ -217,6 +262,10 @@ export const WordCloud = (props: WordCloudProps) => {
   };
   useEffect(render, [currentUsedSpace]);
 
+  /**
+   * clickOnRect checks if a word was clicked
+   * @param e
+   */
   const clickOnRect = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
     const rect = ref.current?.getBoundingClientRect();
     const x = (e.clientX - rect!.left) * 2;
@@ -231,6 +280,10 @@ export const WordCloud = (props: WordCloudProps) => {
     }
   };
 
+  /**
+   * mouseMove checks if the mouse is over a word
+   * @param e
+   */
   const mouseMove = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
     const rect = ref.current?.getBoundingClientRect();
 
@@ -243,26 +296,6 @@ export const WordCloud = (props: WordCloudProps) => {
       if (intersects(rect.rect, rectToCheck)) {
         foundRect = rect;
         break;
-      }
-    }
-
-    if (foundRect) {
-      setCurrentUsedSpace(
-        currentUsedSpace.map((r) => {
-          if (r === foundRect) {
-            return { ...r, opacity: 1 };
-          } else {
-            return { ...r, opacity: 0.1 };
-          }
-        })
-      );
-    } else {
-      for (const rect of currentUsedSpace) {
-        setCurrentUsedSpace(
-          currentUsedSpace.map((r) => {
-            return { ...r, opacity: 1 };
-          })
-        );
       }
     }
   };
