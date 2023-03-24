@@ -10,6 +10,7 @@
     "url": "https://github.com/johansolbakken/wordcloud/tree/main"
   },
   "type": "module",
+  "module": "dist/index.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
