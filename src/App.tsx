@@ -26,7 +26,7 @@ function App() {
     <div className="App">
       <h1>Wordloucd</h1>
       <p>{word?.text}</p>
-      <WordCloud words={words} onWordClicked={(word) => setWord(word)} />
+      <WordCloud words={words} onWordClicked={(word) => setWord(word)} showRects />
     </div>
   );
 }

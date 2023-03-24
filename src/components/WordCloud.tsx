@@ -15,6 +15,7 @@ type Rect = {
 type WordRect = {
   word: Word;
   rect: Rect;
+  size: number;
 };
 
 const intersects = (a: Rect, b: Rect) => {
@@ -26,12 +27,12 @@ const intersects = (a: Rect, b: Rect) => {
   );
 };
 
-const isInBounds = (rect: Rect) => {
+const isInBounds = (rect: Rect, width: number, height: number) => {
   return (
     rect.x >= 0 &&
-    rect.y >= 0 &&
-    rect.x + rect.width <= 800 &&
-    rect.y + rect.height <= 600
+    rect.y - rect.height >= 0 &&
+    rect.x + rect.width <= width &&
+    rect.y + rect.height <= height
   );
 };
 
@@ -77,6 +78,84 @@ export const WordCloud = (props: WordCloudProps) => {
     return normalizedWords;
   };
 
+  const getRectFromScore = (
+    ctx: CanvasRenderingContext2D,
+    size: number,
+    font: string,
+    text: string,
+    score: number,
+    screenWidth: number,
+    screenHeight: number
+  ) => {
+    ctx.font = `${size * score}px ${font}`;
+
+    let metrics = ctx.measureText(text);
+    let fontHeight =
+      metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+    let actualHeight =
+      metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+
+    let width = metrics.width;
+    let height = actualHeight;
+    let x = Math.random() * (screenWidth - width);
+    let y = Math.random() * (screenHeight - height);
+    let rect: Rect = { x, y, width, height };
+
+    return rect;
+  };
+
+  const generateWordRects = (
+    ctx: CanvasRenderingContext2D,
+    size: number,
+    font: string,
+    words: Word[],
+    screenWidth: number,
+    screenHeight: number
+  ) => {
+    const wordRects: WordRect[] = [];
+    const usedSpace: Rect[] = [];
+
+    for (const word of words) {
+      let score = word.score;
+      let rect = getRectFromScore(
+        ctx,
+        size,
+        font,
+        word.text,
+        score,
+        screenWidth,
+        screenHeight
+      );
+
+      let tries = 0;
+      while (
+        !isInBounds(rect, screenWidth, screenHeight) ||
+        usedSpace.some((r) => intersects(r, rect))
+      ) {
+        rect = getRectFromScore(
+          ctx,
+          size,
+          font,
+          word.text,
+          score,
+          screenWidth,
+          screenHeight
+        );
+
+        if (tries > 1000) {
+          score = score * 0.9;
+        }
+
+        tries++;
+      }
+
+      usedSpace.push(rect);
+      wordRects.push({ word, rect, size: size * score });
+    }
+
+    return wordRects;
+  };
+
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
@@ -84,58 +163,42 @@ export const WordCloud = (props: WordCloudProps) => {
     // Background color
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const screenWidth = canvas.width;
+    const screenHeight = canvas.height;
+
     ctx.fillStyle = "#1f1f1f";
-    ctx.fillRect(0, 0, 800, 600);
+    ctx.fillRect(0, 0, screenWidth, screenHeight);
 
+    const font = "Arial";
     const words = preprocessWords();
+    const wordRects = generateWordRects(
+      ctx,
+      600,
+      font,
+      words,
+      screenWidth,
+      screenHeight
+    );
 
-    const wordRects: WordRect[] = [];
-    const usedSpace: Rect[] = [];
-
-    const ratio = 0.5;
-    let size = 1000;
-    let i = 0;
-    const minHeight = 40;
-
-    for (const word of words) {
-      let height = size * word.score;
-      if (height < minHeight) {
-        height = minHeight;
-      }
-      let width = height * ratio * word.text.length;
-      let x = Math.random() * (800 - width);
-      let y = Math.random() * (600 - height);
-      let rect: Rect = { x, y, width, height };
-
-      let tries = 0;
-      while (!isInBounds(rect) || usedSpace.some((r) => intersects(r, rect))) {
-        height = size * word.score;
-        if (height < minHeight) {
-          height = minHeight;
-        }
-        width = height * ratio * word.text.length;
-        x = Math.random() * (800 - width);
-        y = Math.random() * (600 - height);
-        rect = { x, y, width, height };
-        if (tries > 1000) {
-          size -= 1;
-          tries = 0;
-        }
-        tries++;
-      }
-
-      ctx.fillStyle = colors[i];
-      ctx.font = `${height * 0.85}px Monospace`;
-      ctx.fillText(word.text, x, y + height);
+    for (const wordRect of wordRects) {
+      ctx.font = `${wordRect.size}px ${font}`;
+      ctx.fillStyle = "white";
+      ctx.fillText(
+        wordRect.word.text,
+        wordRect.rect.x,
+        wordRect.rect.y + wordRect.rect.height
+      );
 
       if (props.showRects ?? false) {
         ctx.strokeStyle = "white";
-        ctx.strokeRect(x, y, width, height);
+        ctx.strokeRect(
+          wordRect.rect.x,
+          wordRect.rect.y,
+          wordRect.rect.width,
+          wordRect.rect.height
+        );
       }
-
-      usedSpace.push(rect);
-      wordRects.push({ word, rect });
-      i = (i + 1) % colors.length;
     }
     setCurrentUsedSpace(wordRects);
   }, []);
