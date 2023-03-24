@@ -30,8 +30,8 @@ const intersects = (a: Rect, b: Rect) => {
 const isInBounds = (rect: Rect, width: number, height: number) => {
   return (
     rect.x >= 0 &&
-    rect.y - rect.height >= 0 &&
     rect.x + rect.width <= width &&
+    rect.y >= 0 &&
     rect.y + rect.height <= height
   );
 };
@@ -40,33 +40,15 @@ type WordCloudProps = {
   words: Word[];
   showRects?: boolean;
   onWordClicked: (word: Word) => void;
+  colorScheme: string[];
+  width?: number;
+  height?: number;
 };
 
 export const WordCloud = (props: WordCloudProps) => {
   const ref = useRef<HTMLCanvasElement>(null);
 
   const [currentUsedSpace, setCurrentUsedSpace] = useState<WordRect[]>([]);
-
-  // color palette with sharp colors on dark background
-  const colors = [
-    "#ff0000",
-    "#00ff00",
-    "#0000ff",
-    "#ffff00",
-    "#00ffff",
-    "#ff00ff",
-    "#ff8000",
-    "#ff0080",
-    "#8000ff",
-    "#0080ff",
-    "#00ff80",
-    "#ff0080",
-  ];
-
-  for (let i = colors.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [colors[i], colors[j]] = [colors[j], colors[i]];
-  }
 
   const preprocessWords = () => {
     const words = props.words.sort((a, b) => b.score - a.score);
@@ -132,6 +114,12 @@ export const WordCloud = (props: WordCloudProps) => {
         !isInBounds(rect, screenWidth, screenHeight) ||
         usedSpace.some((r) => intersects(r, rect))
       ) {
+        if (tries > 100) {
+          score = score * 0.95;
+          tries = 0;
+        }
+
+        tries++;
         rect = getRectFromScore(
           ctx,
           size,
@@ -141,12 +129,6 @@ export const WordCloud = (props: WordCloudProps) => {
           screenWidth,
           screenHeight
         );
-
-        if (tries > 1000) {
-          score = score * 0.9;
-        }
-
-        tries++;
       }
 
       usedSpace.push(rect);
@@ -164,6 +146,11 @@ export const WordCloud = (props: WordCloudProps) => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    canvas.style.width = `${canvas.width}px`;
+    canvas.style.height = `${canvas.height}px`;
+    canvas.width *= 2;
+    canvas.height *= 2;
+
     const screenWidth = canvas.width;
     const screenHeight = canvas.height;
 
@@ -174,16 +161,23 @@ export const WordCloud = (props: WordCloudProps) => {
     const words = preprocessWords();
     const wordRects = generateWordRects(
       ctx,
-      600,
+      5000,
       font,
       words,
       screenWidth,
       screenHeight
     );
 
+    const colorScheme = props.colorScheme;
+    for (let i = colorScheme.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [colorScheme[i], colorScheme[j]] = [colorScheme[j], colorScheme[i]];
+    }
+
+    let colorIndex = 0;
     for (const wordRect of wordRects) {
       ctx.font = `${wordRect.size}px ${font}`;
-      ctx.fillStyle = "white";
+      ctx.fillStyle = colorScheme[colorIndex % colorScheme.length];
       ctx.fillText(
         wordRect.word.text,
         wordRect.rect.x,
@@ -199,14 +193,20 @@ export const WordCloud = (props: WordCloudProps) => {
           wordRect.rect.height
         );
       }
+
+      colorIndex++;
     }
     setCurrentUsedSpace(wordRects);
+
+    console.log(wordRects);
   }, []);
 
   const clickOnRect = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
     const rect = ref.current?.getBoundingClientRect();
-    const x = e.clientX - rect!.left;
-    const y = e.clientY - rect!.top;
+    const x = (e.clientX - rect!.left) * 2;
+    const y = (e.clientY - rect!.top) * 2;
+
+    console.log(x, y);
 
     const rectToCheck = { x, y, width: 1, height: 1 };
 
@@ -218,6 +218,11 @@ export const WordCloud = (props: WordCloudProps) => {
   };
 
   return (
-    <canvas width={800} height={600} ref={ref} onClick={clickOnRect}></canvas>
+    <canvas
+      width={props.width ?? 400}
+      height={props.height ?? 300}
+      ref={ref}
+      onClick={clickOnRect}
+    ></canvas>
   );
 };
