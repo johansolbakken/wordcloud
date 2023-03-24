@@ -77,10 +77,11 @@ export const WordCloud = (props: WordCloudProps) => {
     let actualHeight =
       metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
 
-    let width = metrics.width;
-    let height = actualHeight;
-    let x = Math.random() * (screenWidth - width);
-    let y = Math.random() * (screenHeight - height);
+    const padding = 10;
+    let width = metrics.width + 2 * padding;
+    let height = actualHeight + 2 * padding;
+    let x = Math.random() * (screenWidth - width) + padding;
+    let y = Math.random() * (screenHeight - height) + padding;
     let rect: Rect = { x, y, width, height };
 
     return rect;
@@ -114,12 +115,12 @@ export const WordCloud = (props: WordCloudProps) => {
         !isInBounds(rect, screenWidth, screenHeight) ||
         usedSpace.some((r) => intersects(r, rect))
       ) {
-        if (tries > 100) {
+        if (tries > 1000) {
           score = score * 0.95;
-          tries = 0;
         }
 
         tries++;
+
         rect = getRectFromScore(
           ctx,
           size,
@@ -146,10 +147,10 @@ export const WordCloud = (props: WordCloudProps) => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.style.width = `${canvas.width}px`;
-    canvas.style.height = `${canvas.height}px`;
-    canvas.width *= 2;
-    canvas.height *= 2;
+    canvas.style.width = `${props.width ?? 500}px`;
+    canvas.style.height = `${props.height ?? 500}px`;
+    canvas.width = (props.width ?? 500) * 2;
+    canvas.height = (props.height ?? 500) * 2;
 
     const screenWidth = canvas.width;
     const screenHeight = canvas.height;
@@ -199,7 +200,7 @@ export const WordCloud = (props: WordCloudProps) => {
     setCurrentUsedSpace(wordRects);
 
     console.log(wordRects);
-  }, []);
+  }, [props.words, props.width, props.height]);
 
   const clickOnRect = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
     const rect = ref.current?.getBoundingClientRect();
@@ -217,12 +218,5 @@ export const WordCloud = (props: WordCloudProps) => {
     }
   };
 
-  return (
-    <canvas
-      width={props.width ?? 400}
-      height={props.height ?? 300}
-      ref={ref}
-      onClick={clickOnRect}
-    ></canvas>
-  );
+  return <canvas ref={ref} onClick={clickOnRect}></canvas>;
 };
