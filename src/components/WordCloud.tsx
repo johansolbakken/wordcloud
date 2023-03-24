@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 
+export type Word = {
+  text: string;
+  score: number;
+};
+
 type Rect = {
   x: number;
   y: number;
   width: number;
   height: number;
+};
+
+type WordRect = {
+  word: Word;
+  rect: Rect;
 };
 
 const intersects = (a: Rect, b: Rect) => {
@@ -25,23 +35,16 @@ const isInBounds = (rect: Rect) => {
   );
 };
 
-export const WordCloud = () => {
+type WordCloudProps = {
+  words: Word[];
+  showRects?: boolean;
+  onWordClicked: (word: Word) => void;
+};
+
+export const WordCloud = (props: WordCloudProps) => {
   const ref = useRef<HTMLCanvasElement>(null);
 
-  const words = [
-    { text: "Hello", percentage: 2.0 },
-    { text: "World", percentage: 1.7 },
-    { text: "This", percentage: 1.5 },
-    { text: "Is", percentage: 0.9 },
-    { text: "A", percentage: 0.8 },
-    { text: "Word", percentage: 0.7 },
-    { text: "Cloud", percentage: 0.6 },
-    { text: "Example", percentage: 0.5 },
-    { text: "With", percentage: 0.4 },
-    { text: "Vite", percentage: 0.3 },
-    { text: "And", percentage: 0.2 },
-    { text: "React", percentage: 0.1 },
-  ];
+  const [currentUsedSpace, setCurrentUsedSpace] = useState<WordRect[]>([]);
 
   // color palette with sharp colors on dark background
   const colors = [
@@ -64,46 +67,94 @@ export const WordCloud = () => {
     [colors[i], colors[j]] = [colors[j], colors[i]];
   }
 
+  const preprocessWords = () => {
+    const words = props.words.sort((a, b) => b.score - a.score);
+    const totalScore = words.reduce((a, b) => a + b.score, 0);
+    const normalizedWords = words.map((w) => ({
+      ...w,
+      score: w.score / totalScore,
+    }));
+    return normalizedWords;
+  };
+
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
 
+    // Background color
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.fillStyle = "#1f1f1f";
     ctx.fillRect(0, 0, 800, 600);
 
+    const words = preprocessWords();
+
+    const wordRects: WordRect[] = [];
     const usedSpace: Rect[] = [];
 
     const ratio = 0.5;
-    let size = 100;
+    let size = 1000;
     let i = 0;
-    for (const word of words) {
-      let height = size * word.percentage;
-      let width = height * ratio * word.text.length;
+    const minHeight = 40;
 
+    for (const word of words) {
+      let height = size * word.score;
+      if (height < minHeight) {
+        height = minHeight;
+      }
+      let width = height * ratio * word.text.length;
       let x = Math.random() * (800 - width);
       let y = Math.random() * (600 - height);
+      let rect: Rect = { x, y, width, height };
 
-      let rect = { x, y, width, height };
-
+      let tries = 0;
       while (!isInBounds(rect) || usedSpace.some((r) => intersects(r, rect))) {
-        height = size * word.percentage;
+        height = size * word.score;
+        if (height < minHeight) {
+          height = minHeight;
+        }
         width = height * ratio * word.text.length;
         x = Math.random() * (800 - width);
         y = Math.random() * (600 - height);
         rect = { x, y, width, height };
-        size -= 1;
+        if (tries > 1000) {
+          size -= 1;
+          tries = 0;
+        }
+        tries++;
       }
 
       ctx.fillStyle = colors[i];
       ctx.font = `${height * 0.85}px Monospace`;
       ctx.fillText(word.text, x, y + height);
 
+      if (props.showRects ?? false) {
+        ctx.strokeStyle = "white";
+        ctx.strokeRect(x, y, width, height);
+      }
+
       usedSpace.push(rect);
+      wordRects.push({ word, rect });
       i = (i + 1) % colors.length;
     }
+    setCurrentUsedSpace(wordRects);
   }, []);
 
-  return <canvas width={800} height={600} ref={ref}></canvas>;
+  const clickOnRect = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
+    const rect = ref.current?.getBoundingClientRect();
+    const x = e.clientX - rect!.left;
+    const y = e.clientY - rect!.top;
+
+    const rectToCheck = { x, y, width: 1, height: 1 };
+
+    for (const rect of currentUsedSpace) {
+      if (intersects(rect.rect, rectToCheck)) {
+        props.onWordClicked(rect.word);
+      }
+    }
+  };
+
+  return (
+    <canvas width={800} height={600} ref={ref} onClick={clickOnRect}></canvas>
+  );
 };
