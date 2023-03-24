@@ -59,6 +59,7 @@ type WordCloudProps = {
   height?: number;
   padding?: number;
   font?: string;
+  backgroundColor?: string;
 };
 
 export const WordCloud = (props: WordCloudProps) => {
@@ -243,7 +244,7 @@ export const WordCloud = (props: WordCloudProps) => {
     const screenWidth = canvas.width;
     const screenHeight = canvas.height;
 
-    ctx.fillStyle = "#1f1f1f";
+    ctx.fillStyle = props.backgroundColor ?? "#1f1f1f";
     ctx.fillRect(0, 0, screenWidth, screenHeight);
 
     let colorIndex = 0;
