@@ -43,12 +43,15 @@ type WordCloudProps = {
   colorScheme: string[];
   width?: number;
   height?: number;
+  padding?: number;
 };
 
 export const WordCloud = (props: WordCloudProps) => {
   const ref = useRef<HTMLCanvasElement>(null);
 
   const [currentUsedSpace, setCurrentUsedSpace] = useState<WordRect[]>([]);
+
+  const padding = props.padding ?? 20;
 
   const preprocessWords = () => {
     const words = props.words.sort((a, b) => b.score - a.score);
@@ -77,7 +80,6 @@ export const WordCloud = (props: WordCloudProps) => {
     let actualHeight =
       metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
 
-    const padding = 10;
     let width = metrics.width + 2 * padding;
     let height = actualHeight + 2 * padding;
     let x = Math.random() * (screenWidth - width) + padding;
