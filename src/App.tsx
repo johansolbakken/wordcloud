@@ -60,7 +60,7 @@ function App() {
     <div className="App">
       <h1>Wordloucd</h1>
       <p>{word?.text}</p>
-      <div style={{ width: 800, height: 600, }}>
+      <div style={{ width: 800, height: 600 }}>
         <WordCloud
           words={words}
           onWordClicked={(word) => setWord(word)}

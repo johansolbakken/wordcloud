@@ -100,9 +100,15 @@ export const WordCloud = (props: WordCloudProps) => {
     text: string,
     score: number,
     screenWidth: number,
-    screenHeight: number
+    screenHeight: number,
+    minWidth: number
   ) => {
-    ctx.font = `${size * score}px ${font}`;
+    let fontSize = size * score;
+    if (fontSize < minWidth) {
+      fontSize = minWidth;
+    }
+
+    ctx.font = `${fontSize}px ${font}`;
 
     let metrics = ctx.measureText(text);
     let fontHeight =
@@ -134,7 +140,8 @@ export const WordCloud = (props: WordCloudProps) => {
     size: number,
     words: Word[],
     screenWidth: number,
-    screenHeight: number
+    screenHeight: number,
+    minFontSize: number
   ) => {
     const wordRects: WordRect[] = [];
     const usedSpace: Rect[] = [];
@@ -147,7 +154,8 @@ export const WordCloud = (props: WordCloudProps) => {
         word.text,
         score,
         screenWidth,
-        screenHeight
+        screenHeight,
+        minFontSize
       );
 
       let tries = 0;
@@ -167,7 +175,8 @@ export const WordCloud = (props: WordCloudProps) => {
           word.text,
           score,
           screenWidth,
-          screenHeight
+          screenHeight,
+          minFontSize
         );
       }
 
@@ -201,10 +210,11 @@ export const WordCloud = (props: WordCloudProps) => {
     const words = preprocessWords();
     const wordRects = generateWordRects(
       ctx,
-      5000,
+      4000,
       words,
       screenWidth,
-      screenHeight
+      screenHeight,
+      10
     );
 
     const colorScheme = props.colorScheme;
@@ -238,6 +248,10 @@ export const WordCloud = (props: WordCloudProps) => {
 
     let colorIndex = 0;
     for (const wordRect of currentUsedSpace) {
+      if (wordRect.rect.height < 80) {
+        continue;
+      }
+
       ctx.font = `${wordRect.size}px ${font}`;
       ctx.fillStyle = colroScheme[colorIndex % colroScheme.length];
       ctx.globalAlpha = wordRect.opacity;
@@ -276,6 +290,7 @@ export const WordCloud = (props: WordCloudProps) => {
     for (const rect of currentUsedSpace) {
       if (intersects(rect.rect, rectToCheck)) {
         props.onWordClicked(rect.word);
+        console.log(rect.rect);
       }
     }
   };
