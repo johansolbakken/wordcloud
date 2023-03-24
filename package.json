@@ -1,7 +1,14 @@
 {
   "name": "wordcloud-johan-frontend-hei-hei",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "0.0.1",
+  "description": "Wordcloud frontend",
+  "author": "Johan Solbakken<johan.hvaler@gmail.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/johansolbakken/wordcloud/tree/main"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
